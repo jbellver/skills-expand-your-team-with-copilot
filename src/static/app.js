@@ -44,6 +44,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Authentication state
   let currentUser = null;
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
+
   // Time range mappings for the dropdown
   const timeRanges = {
     morning: { start: "06:00", end: "08:00" }, // Before school hours
@@ -553,16 +565,16 @@ document.addEventListener("DOMContentLoaded", () => {
         </ul>
       </div>
       <div class="share-buttons">
-        <button class="share-button share-twitter" data-activity="${name}" data-description="${details.description.replace(/"/g, '&quot;')}" title="Share on Twitter">
+        <button class="share-button share-twitter" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share on Twitter">
           <span class="share-icon">🐦</span>
         </button>
-        <button class="share-button share-facebook" data-activity="${name}" data-description="${details.description.replace(/"/g, '&quot;')}" title="Share on Facebook">
+        <button class="share-button share-facebook" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share on Facebook">
           <span class="share-icon">👍</span>
         </button>
-        <button class="share-button share-email" data-activity="${name}" data-description="${details.description.replace(/"/g, '&quot;')}" title="Share via Email">
+        <button class="share-button share-email" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share via Email">
           <span class="share-icon">✉️</span>
         </button>
-        <button class="share-button share-copy" data-activity="${name}" data-description="${details.description.replace(/"/g, '&quot;')}" title="Copy Link">
+        <button class="share-button share-copy" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Copy Link">
           <span class="share-icon">🔗</span>
         </button>
       </div>
@@ -934,7 +946,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fallbackCopyToClipboard(text) {
-    // Fallback for older browsers
+    // Fallback for older browsers that don't support the Clipboard API
+    // Note: document.execCommand('copy') is deprecated but kept for legacy browser support
     const textArea = document.createElement("textarea");
     textArea.value = text;
     textArea.style.position = "fixed";
