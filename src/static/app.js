@@ -44,6 +44,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Authentication state
   let currentUser = null;
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+  }
+
   // Time range mappings for the dropdown
   const timeRanges = {
     morning: { start: "06:00", end: "08:00" }, // Before school hours
@@ -552,6 +564,20 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")}
         </ul>
       </div>
+      <div class="share-buttons">
+        <button class="share-button share-twitter" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share on Twitter">
+          <span class="share-icon">🐦</span>
+        </button>
+        <button class="share-button share-facebook" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share on Facebook">
+          <span class="share-icon">👍</span>
+        </button>
+        <button class="share-button share-email" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Share via Email">
+          <span class="share-icon">✉️</span>
+        </button>
+        <button class="share-button share-copy" data-activity="${escapeHtml(name)}" data-description="${escapeHtml(details.description)}" title="Copy Link">
+          <span class="share-icon">🔗</span>
+        </button>
+      </div>
       <div class="activity-card-actions">
         ${
           currentUser
@@ -586,6 +612,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for social sharing buttons
+    const shareButtons = activityCard.querySelectorAll(".share-button");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const activityName = event.currentTarget.dataset.activity;
+        const activityDescription = event.currentTarget.dataset.description;
+        
+        if (button.classList.contains("share-twitter")) {
+          shareOnTwitter(activityName, activityDescription);
+        } else if (button.classList.contains("share-facebook")) {
+          shareOnFacebook(activityName, activityDescription);
+        } else if (button.classList.contains("share-email")) {
+          shareViaEmail(activityName, activityDescription);
+        } else if (button.classList.contains("share-copy")) {
+          copyShareLink(activityName, activityDescription);
+        }
+      });
+    });
 
     activitiesList.appendChild(activityCard);
   }
@@ -854,6 +899,77 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Social sharing functions
+  function generateShareUrl(activityName) {
+    // Generate a URL that points to the current page
+    // In a real application, this could include query parameters or a deep link
+    return window.location.origin + window.location.pathname;
+  }
+
+  function shareOnTwitter(activityName, activityDescription) {
+    const url = generateShareUrl(activityName);
+    const text = `Check out this activity at Mergington High School: ${activityName} - ${activityDescription}`;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(twitterUrl, '_blank', 'width=550,height=420');
+  }
+
+  function shareOnFacebook(activityName, activityDescription) {
+    const url = generateShareUrl(activityName);
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    window.open(facebookUrl, '_blank', 'width=550,height=420');
+  }
+
+  function shareViaEmail(activityName, activityDescription) {
+    const url = generateShareUrl(activityName);
+    const subject = `Join me in ${activityName} at Mergington High School!`;
+    const body = `Hi!\n\nI thought you might be interested in this activity at Mergington High School:\n\n${activityName}\n${activityDescription}\n\nCheck it out here: ${url}\n\nSee you there!`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
+  function copyShareLink(activityName, activityDescription) {
+    const url = generateShareUrl(activityName);
+    const shareText = `Check out ${activityName} at Mergington High School: ${url}`;
+    
+    // Try to use the modern Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareText).then(() => {
+        showMessage("Link copied to clipboard!", "success");
+      }).catch((error) => {
+        console.error("Failed to copy:", error);
+        fallbackCopyToClipboard(shareText);
+      });
+    } else {
+      fallbackCopyToClipboard(shareText);
+    }
+  }
+
+  function fallbackCopyToClipboard(text) {
+    // Fallback for older browsers that don't support the Clipboard API
+    // Note: document.execCommand('copy') is deprecated but kept for legacy browser support
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showMessage("Link copied to clipboard!", "success");
+      } else {
+        showMessage("Failed to copy link. Please try again.", "error");
+      }
+    } catch (error) {
+      console.error("Fallback copy failed:", error);
+      showMessage("Failed to copy link. Please try again.", "error");
+    }
+    
+    document.body.removeChild(textArea);
+  }
 
   // Expose filter functions to window for future UI control
   window.activityFilters = {
